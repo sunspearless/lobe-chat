@@ -559,5 +559,78 @@
     "bps": true,
     "folderMillis": 1753201379817,
     "hash": "fe5c0d7c2768189771c42ef93693fc1d58586b468c4bdde7fb6f2dc58cc9931c"
+  },
+  {
+    "sql": [
+      "CREATE TABLE IF NOT EXISTS \"chat_groups\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"title\" text,\n\t\"description\" text,\n\t\"config\" jsonb,\n\t\"client_id\" text,\n\t\"user_id\" text NOT NULL,\n\t\"pinned\" boolean DEFAULT false,\n\t\"accessed_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);\n",
+      "\nCREATE TABLE IF NOT EXISTS \"chat_groups_agents\" (\n\t\"chat_group_id\" text NOT NULL,\n\t\"agent_id\" text NOT NULL,\n\t\"user_id\" text NOT NULL,\n\t\"enabled\" boolean DEFAULT true,\n\t\"order\" integer DEFAULT 0,\n\t\"role\" text DEFAULT 'participant',\n\t\"accessed_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\tCONSTRAINT \"chat_groups_agents_chat_group_id_agent_id_pk\" PRIMARY KEY(\"chat_group_id\",\"agent_id\")\n);\n",
+      "\nALTER TABLE \"messages\" ADD COLUMN IF NOT EXISTS \"group_id\" text;",
+      "\nALTER TABLE \"messages\" ADD COLUMN IF NOT EXISTS \"target_id\" text;",
+      "\nALTER TABLE \"topics\" ADD COLUMN IF NOT EXISTS \"group_id\" text;",
+      "\nALTER TABLE \"chat_groups\" ADD CONSTRAINT \"chat_groups_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "\nALTER TABLE \"chat_groups_agents\" ADD CONSTRAINT \"chat_groups_agents_chat_group_id_chat_groups_id_fk\" FOREIGN KEY (\"chat_group_id\") REFERENCES \"public\".\"chat_groups\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "\nALTER TABLE \"chat_groups_agents\" ADD CONSTRAINT \"chat_groups_agents_agent_id_agents_id_fk\" FOREIGN KEY (\"agent_id\") REFERENCES \"public\".\"agents\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "\nALTER TABLE \"chat_groups_agents\" ADD CONSTRAINT \"chat_groups_agents_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "\nCREATE UNIQUE INDEX \"chat_groups_client_id_user_id_unique\" ON \"chat_groups\" USING btree (\"client_id\",\"user_id\");",
+      "\nALTER TABLE \"messages\" ADD CONSTRAINT \"messages_group_id_chat_groups_id_fk\" FOREIGN KEY (\"group_id\") REFERENCES \"public\".\"chat_groups\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "\nALTER TABLE \"topics\" ADD CONSTRAINT \"topics_group_id_chat_groups_id_fk\" FOREIGN KEY (\"group_id\") REFERENCES \"public\".\"chat_groups\"(\"id\") ON DELETE cascade ON UPDATE no action;\n"
+    ],
+    "bps": true,
+    "folderMillis": 1756298669289,
+    "hash": "3af468ca75761ca4ca4e32ba8704728f0499aa935bfe00ae5aabfa8405a18bd4"
+  },
+  {
+    "sql": [
+      "-- Truncate title to 150 characters if it exceeds the limit\nUPDATE agents\nSET title = LEFT(title, 200)\nWHERE LENGTH(title) > 200;",
+      "\n\n-- Truncate description to 300 characters if it exceeds the limit\nUPDATE agents\nSET description = LEFT(description, 300)\nWHERE LENGTH(description) > 300;",
+      "\n\nCREATE INDEX IF NOT EXISTS \"agents_title_idx\" ON \"agents\" USING btree (\"title\");",
+      "\nCREATE INDEX IF NOT EXISTS \"agents_description_idx\" ON \"agents\" USING btree (\"description\");\n"
+    ],
+    "bps": true,
+    "folderMillis": 1757902833213,
+    "hash": "41395946b955d89f5c97272077d27d131a626b64bdca2b970c0bbcdf0a8370fd"
+  },
+  {
+    "sql": [
+      "ALTER TABLE \"agents\" ALTER COLUMN \"title\" SET DATA TYPE varchar(255);",
+      "\nALTER TABLE \"agents\" ALTER COLUMN \"description\" SET DATA TYPE varchar(1000);\n"
+    ],
+    "bps": true,
+    "folderMillis": 1757993755131,
+    "hash": "bafc1c74796a4c69342e61d28997b0e3a38f1e7d022ba92d9cbf31e00b5748c8"
+  },
+  {
+    "sql": [
+      "-- 解决 chunks 表慢查询\nCREATE INDEX IF NOT EXISTS \"chunks_user_id_idx\" ON \"chunks\" USING btree (\"user_id\");",
+      "\n\n-- 解决 topics 表批量删除慢查询\nCREATE INDEX IF NOT EXISTS \"topics_user_id_idx\" ON \"topics\" USING btree (\"user_id\");",
+      "\nCREATE INDEX IF NOT EXISTS \"topics_id_user_id_idx\" ON \"topics\" USING btree (\"id\",\"user_id\");",
+      "\n\n-- 解决 sessions 表删除慢查询\nCREATE INDEX IF NOT EXISTS \"sessions_user_id_idx\" ON \"sessions\" USING btree (\"user_id\");",
+      "\nCREATE INDEX IF NOT EXISTS \"sessions_id_user_id_idx\" ON \"sessions\" USING btree (\"id\",\"user_id\");",
+      "\n\n-- 解决 messages 表统计查询慢查询\nCREATE INDEX IF NOT EXISTS \"messages_user_id_idx\" ON \"messages\" USING btree (\"user_id\");",
+      "\nCREATE INDEX IF NOT EXISTS \"messages_session_id_idx\" ON \"messages\" USING btree (\"session_id\");",
+      "\nCREATE INDEX IF NOT EXISTS \"messages_thread_id_idx\" ON \"messages\" USING btree (\"thread_id\");",
+      "\n\n-- 解决 embeddings 删除慢查询\nCREATE INDEX IF NOT EXISTS \"embeddings_chunk_id_idx\" ON \"embeddings\" USING btree (\"chunk_id\");",
+      "\n"
+    ],
+    "bps": true,
+    "folderMillis": 1758012348218,
+    "hash": "ce04ef4cde2db479d28ff08dced8383052c5052c904bab8343b5493fa10b0679"
+  },
+  {
+    "sql": [
+      "ALTER TABLE \"messages\" ALTER COLUMN \"role\" SET DATA TYPE varchar(255);",
+      "\nALTER TABLE \"chat_groups\" ADD COLUMN IF NOT EXISTS \"group_id\" text;",
+      "\nALTER TABLE \"chat_groups\" DROP CONSTRAINT IF EXISTS \"chat_groups_group_id_session_groups_id_fk\";",
+      "\nALTER TABLE \"chat_groups\" ADD CONSTRAINT \"chat_groups_group_id_session_groups_id_fk\" FOREIGN KEY (\"group_id\") REFERENCES \"public\".\"session_groups\"(\"id\") ON DELETE set null ON UPDATE no action;\n"
+    ],
+    "bps": true,
+    "folderMillis": 1758825944181,
+    "hash": "1ba9b1f74ea13348da98d6fcdad7867ab4316ed565bf75d84d160c526cdac14b"
+  },
+  {
+    "sql": ["ALTER TABLE \"agents\" ADD COLUMN IF NOT EXISTS \"virtual\" boolean DEFAULT false;"],
+    "bps": true,
+    "folderMillis": 1759116400580,
+    "hash": "433ddae88e785f2db734e49a4c115eee93e60afe389f7919d66e5ba9aa159a37"
   }
 ]

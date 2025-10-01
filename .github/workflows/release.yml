@@ -16,19 +16,24 @@ jobs:
           POSTGRES_PASSWORD: postgres
         options: >-
           --health-cmd pg_isready --health-interval 10s --health-timeout 5s  --health-retries 5
+
+
         ports:
           - 5432:5432
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
 
       - name: Install bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ secrets.BUN_VERSION }}
 
@@ -38,10 +43,8 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - uses: pnpm/action-setup@v4
-
       - name: Test Database Coverage
-        run: pnpm --filter @lobechat/database test
+        run: bun run --filter @lobechat/database test
         env:
           DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
           DATABASE_DRIVER: node

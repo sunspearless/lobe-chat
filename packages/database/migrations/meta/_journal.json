@@ -210,6 +210,48 @@
       "when": 1753201379817,
       "tag": "0029_add_apikey_manage",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1756298669289,
+      "tag": "0030_add_group_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1757902833213,
+      "tag": "0031_add_agent_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1757993755131,
+      "tag": "0032_improve_agents_field",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1758012348218,
+      "tag": "0033_add_table_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1758825944181,
+      "tag": "0034_fix_chat_group",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1759116400580,
+      "tag": "0035_add_virtual",
+      "breakpoints": true
     }
   ],
   "version": "6"

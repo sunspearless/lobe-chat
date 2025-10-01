@@ -1,4 +1,5 @@
-import type { ChatModelCard } from '@/types/llm';
+import type { ChatModelCard } from '@lobechat/types';
+import { AIBaseModelCard } from 'model-bank';
 
 import type { ModelProviderKey } from '../types';
 
@@ -17,18 +18,28 @@ export const MODEL_LIST_CONFIGS = {
     visionKeywords: ['claude'],
   },
   deepseek: {
-    functionCallKeywords: ['v3', 'r1'],
-    reasoningKeywords: ['r1'],
+    functionCallKeywords: ['v3', 'r1', 'deepseek-chat'],
+    reasoningKeywords: ['r1', 'deepseek-reasoner', 'v3.1'],
   },
   google: {
     functionCallKeywords: ['gemini'],
     reasoningKeywords: ['thinking', '-2.5-'],
     visionKeywords: ['gemini', 'learnlm'],
   },
+  inclusionai: {
+    functionCallKeywords: ['ling-'],
+    reasoningKeywords: ['ring-'],
+    visionKeywords: ['ming-'],
+  },
   llama: {
     functionCallKeywords: ['llama-3.2', 'llama-3.3', 'llama-4'],
     reasoningKeywords: [],
     visionKeywords: ['llava'],
+  },
+  longcat: {
+    functionCallKeywords: ['longcat'],
+    reasoningKeywords: ['thinking'],
+    visionKeywords: [],
   },
   moonshot: {
     functionCallKeywords: ['moonshot', 'kimi'],
@@ -52,7 +63,7 @@ export const MODEL_LIST_CONFIGS = {
       'qwen2.5',
       'qwen3',
     ],
-    reasoningKeywords: ['qvq', 'qwq', 'qwen3', '!-instruct-', '!-coder-'],
+    reasoningKeywords: ['qvq', 'qwq', 'qwen3', '!-instruct-', '!-coder-', '!-max-'],
     visionKeywords: ['qvq', 'vl'],
   },
   v0: {
@@ -67,7 +78,7 @@ export const MODEL_LIST_CONFIGS = {
   },
   xai: {
     functionCallKeywords: ['grok'],
-    reasoningKeywords: ['mini', 'grok-4'],
+    reasoningKeywords: ['mini', 'grok-4', 'grok-code-fast', '!non-reasoning'],
     visionKeywords: ['vision', 'grok-4'],
   },
   zeroone: {
@@ -81,12 +92,14 @@ export const MODEL_LIST_CONFIGS = {
   },
 } as const;
 
-// 模型提供商关键词配置
-export const PROVIDER_DETECTION_CONFIG = {
+// 模型所有者 (提供商) 关键词配置
+export const MODEL_OWNER_DETECTION_CONFIG = {
   anthropic: ['claude'],
   deepseek: ['deepseek'],
   google: ['gemini', 'imagen'],
+  inclusionai: ['ling-', 'ming-', 'ring-'],
   llama: ['llama', 'llava'],
+  longcat: ['longcat'],
   moonshot: ['moonshot', 'kimi'],
   openai: ['o1', 'o3', 'o4', 'gpt-'],
   qwen: ['qwen', 'qwq', 'qvq'],
@@ -111,11 +124,15 @@ export const IMAGE_MODEL_KEYWORDS = [
   'wanxiang',
   'DESCRIBE',
   'UPSCALE',
+  '!gemini', // 排除 gemini 模型，即使包含 -image 也是 chat 模型
   '-image',
   '^V3',
   '^V_2',
   '^V_1',
 ] as const;
+
+// 嵌入模型关键词配置
+export const EMBEDDING_MODEL_KEYWORDS = ['embedding', 'embed', 'bge', 'm3e'] as const;
 
 /**
  * 检测关键词列表是否匹配模型ID（支持多种匹配模式）
@@ -168,12 +185,15 @@ const findKnownModelByProvider = async (
   const lowerModelId = modelId.toLowerCase();
 
   try {
-    // 动态构建导入路径
-    const modulePath = `@/config/aiModels/${provider}`;
-
     // 尝试动态导入对应的配置文件
-    const moduleImport = await import(modulePath);
-    const providerModels = moduleImport.default;
+    const modules = await import('model-bank');
+
+    // 如果提供商配置文件不存在，跳过
+    if (!(provider in modules)) {
+      return null;
+    }
+
+    const providerModels = modules[provider as keyof typeof modules] as AIBaseModelCard[];
 
     // 如果导入成功且有数据，进行查找
     if (Array.isArray(providerModels)) {
@@ -195,7 +215,7 @@ const findKnownModelByProvider = async (
 export const detectModelProvider = (modelId: string): keyof typeof MODEL_LIST_CONFIGS => {
   const lowerModelId = modelId.toLowerCase();
 
-  for (const [provider, keywords] of Object.entries(PROVIDER_DETECTION_CONFIG)) {
+  for (const [provider, keywords] of Object.entries(MODEL_OWNER_DETECTION_CONFIG)) {
     const hasKeyword = isKeywordListMatch(lowerModelId, keywords);
 
     if (hasKeyword && provider in MODEL_LIST_CONFIGS) {
@@ -211,9 +231,21 @@ export const detectModelProvider = (modelId: string): keyof typeof MODEL_LIST_CO
  * @param timestamp 时间戳（秒）
  * @returns 格式化的日期字符串 (YYYY-MM-DD)
  */
-const formatTimestampToDate = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000); // 将秒转换为毫秒
-  return date.toISOString().split('T')[0]; // 返回 YYYY-MM-DD 格式
+const formatTimestampToDate = (timestamp: number): string | undefined => {
+  if (timestamp === null || timestamp === undefined || Number.isNaN(timestamp)) return undefined;
+
+  // 支持秒级或毫秒级时间戳：
+  // - 如果是毫秒级（>= 1e12），直接当作毫秒；
+  // - 否则视为秒，需要 *1000 转为毫秒
+  const msTimestamp = timestamp > 1e12 ? timestamp : timestamp * 1000;
+  const date = new Date(msTimestamp);
+
+  // 验证解析结果和年份范围（只接受 4 位年份，避免超出 varchar(10) 的 YYYY-MM-DD）
+  const year = date.getUTCFullYear();
+  if (year < 1000 || year > 9999) return undefined;
+
+  const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+  return dateStr.length === 10 ? dateStr : undefined;
 };
 
 /**
@@ -245,6 +277,20 @@ const processReleasedAt = (model: any, knownModel?: any): string | undefined => 
 };
 
 /**
+ * 处理模型显示名称
+ * @param displayName 原始显示名称
+ * @returns 处理后的显示名称
+ */
+const processDisplayName = (displayName: string): string => {
+  // 如果包含 "Gemini 2.5 Flash Image Preview"，替换对应部分为 "Nano Banana"
+  if (displayName.includes('Gemini 2.5 Flash Image Preview')) {
+    return displayName.replace('Gemini 2.5 Flash Image Preview', 'Nano Banana');
+  }
+
+  return displayName;
+};
+
+/**
  * 处理模型卡片的通用逻辑
  */
 const processModelCard = (
@@ -268,19 +314,50 @@ const processModelCard = (
       IMAGE_MODEL_KEYWORDS.map((k) => k.toLowerCase()),
     )
       ? 'image'
-      : 'chat');
+      : isKeywordListMatch(
+        model.id.toLowerCase(),
+        EMBEDDING_MODEL_KEYWORDS.map((k) => k.toLowerCase()),
+      )
+        ? 'embedding'
+        : 'chat');
 
   // image model can't find parameters
   if (modelType === 'image' && !model.parameters && !knownModel?.parameters) {
     return undefined;
   }
 
+  const formatPricing = (pricing?: { input?: number; output?: number; units?: any[] }) => {
+    if (!pricing || typeof pricing !== 'object') return undefined;
+    if (Array.isArray(pricing.units)) {
+      return { units: pricing.units };
+    }
+    const { input, output } = pricing;
+    if (typeof input !== 'number' && typeof output !== 'number') return undefined;
+
+    const units = [];
+    if (typeof input === 'number') {
+      units.push({
+        name: 'textInput' as const,
+        rate: input,
+        strategy: 'fixed' as const,
+        unit: 'millionTokens' as const,
+      });
+    }
+    if (typeof output === 'number') {
+      units.push({
+        name: 'textOutput' as const,
+        rate: output,
+        strategy: 'fixed' as const,
+        unit: 'millionTokens' as const,
+      });
+    }
+    return { units };
+  };
+
   return {
     contextWindowTokens: model.contextWindowTokens ?? knownModel?.contextWindowTokens ?? undefined,
     description: model.description ?? knownModel?.description ?? '',
-    displayName: (model.displayName ?? knownModel?.displayName ?? model.id)
-      .replaceAll(/\s*[(（][^)）]*[)）]\s*/g, '')
-      .trim(), // 去除括号内容
+    displayName: processDisplayName(model.displayName ?? knownModel?.displayName ?? model.id),
     enabled: model?.enabled || false,
     functionCall:
       model.functionCall ??
@@ -289,7 +366,7 @@ const processModelCard = (
         false),
     id: model.id,
     maxOutput: model.maxOutput ?? knownModel?.maxOutput ?? undefined,
-    // pricing: knownModel?.pricing ?? undefined,
+    pricing: formatPricing(model?.pricing) ?? undefined,
     reasoning:
       model.reasoning ??
       knownModel?.abilities?.reasoning ??
@@ -319,7 +396,7 @@ export const processModelList = async (
   config: ModelProcessorConfig,
   provider?: keyof typeof MODEL_LIST_CONFIGS,
 ): Promise<ChatModelCard[]> => {
-  const { LOBE_DEFAULT_MODEL_LIST } = await import('@/config/aiModels');
+  const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
 
   return Promise.all(
     modelList.map(async (model) => {
@@ -352,14 +429,15 @@ export const processMultiProviderModelList = async (
   modelList: Array<{ id: string }>,
   providerid?: ModelProviderKey,
 ): Promise<ChatModelCard[]> => {
-  const { LOBE_DEFAULT_MODEL_LIST } = await import('@/config/aiModels');
+  const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
 
   // 如果提供了 providerid，尝试获取该提供商的本地配置
   let providerLocalConfig: any[] | null = null;
   if (providerid) {
     try {
-      const moduleImport = await import(`@/config/aiModels/${providerid}.ts`);
-      providerLocalConfig = moduleImport.default;
+      const modules = await import('model-bank');
+
+      providerLocalConfig = modules[providerid];
     } catch {
       // 如果配置文件不存在或导入失败，保持为 null
       providerLocalConfig = null;

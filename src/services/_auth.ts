@@ -1,16 +1,17 @@
-import { ModelProvider } from '@lobechat/model-runtime';
-
-import { ClientSecretPayload, LOBE_CHAT_AUTH_HEADER } from '@/const/auth';
-import { isDeprecatedEdition } from '@/const/version';
-import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
-import { useUserStore } from '@/store/user';
-import { keyVaultsConfigSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { LOBE_CHAT_AUTH_HEADER, isDeprecatedEdition } from '@lobechat/const';
 import {
   AWSBedrockKeyVault,
   AzureOpenAIKeyVault,
+  ClientSecretPayload,
   CloudflareKeyVault,
   OpenAICompatibleKeyVault,
-} from '@/types/user/settings';
+} from '@lobechat/types';
+import { clientApiKeyManager } from '@lobechat/utils/client';
+import { ModelProvider } from 'model-bank';
+
+import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
+import { useUserStore } from '@/store/user';
+import { keyVaultsConfigSelectors, userProfileSelectors } from '@/store/user/selectors';
 import { obfuscatePayloadWithXOR } from '@/utils/client/xor-obfuscation';
 
 export const getProviderAuthPayload = (
@@ -48,7 +49,7 @@ export const getProviderAuthPayload = (
 
     case ModelProvider.Azure: {
       return {
-        apiKey: keyVaults.apiKey,
+        apiKey: clientApiKeyManager.pick(keyVaults.apiKey),
 
         apiVersion: keyVaults.apiVersion,
         /** @deprecated */
@@ -63,7 +64,7 @@ export const getProviderAuthPayload = (
 
     case ModelProvider.Cloudflare: {
       return {
-        apiKey: keyVaults?.apiKey,
+        apiKey: clientApiKeyManager.pick(keyVaults?.apiKey),
 
         baseURLOrAccountID: keyVaults?.baseURLOrAccountID,
         /** @deprecated */
@@ -72,12 +73,12 @@ export const getProviderAuthPayload = (
     }
 
     default: {
-      return { apiKey: keyVaults?.apiKey, baseURL: keyVaults?.baseURL };
+      return { apiKey: clientApiKeyManager.pick(keyVaults?.apiKey), baseURL: keyVaults?.baseURL };
     }
   }
 };
 
-const createAuthTokenWithPayload = async (payload = {}) => {
+const createAuthTokenWithPayload = (payload = {}) => {
   const accessCode = keyVaultsConfigSelectors.password(useUserStore.getState());
   const userId = userProfileSelectors.userId(useUserStore.getState());
 
@@ -106,6 +107,11 @@ export const createPayloadWithKeyVaults = (provider: string) => {
   return getProviderAuthPayload(provider, keyVaults);
 };
 
+export const createXorKeyVaultsPayload = (provider: string) => {
+  const payload = createPayloadWithKeyVaults(provider);
+  return obfuscatePayloadWithXOR(payload);
+};
+
 // eslint-disable-next-line no-undef
 export const createHeaderWithAuth = async (params?: AuthParams): Promise<HeadersInit> => {
   let payload = params?.payload || {};
@@ -114,7 +120,7 @@ export const createHeaderWithAuth = async (params?: AuthParams): Promise<Headers
     payload = { ...payload, ...createPayloadWithKeyVaults(params?.provider) };
   }
 
-  const token = await createAuthTokenWithPayload(payload);
+  const token = createAuthTokenWithPayload(payload);
 
   // eslint-disable-next-line no-undef
   return { ...params?.headers, [LOBE_CHAT_AUTH_HEADER]: token };

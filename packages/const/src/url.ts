@@ -1,10 +1,9 @@
 import qs from 'query-string';
 import urlJoin from 'url-join';
 
-import { withBasePath } from '@/utils/basePath';
-import { isDev } from '@/utils/env';
-
 import { INBOX_SESSION_ID } from './session';
+
+const isDev = process.env.NODE_ENV === 'development';
 
 export const UTM_SOURCE = 'chat_preview';
 
@@ -56,7 +55,7 @@ export const SESSION_CHAT_URL = (id: string = INBOX_SESSION_ID, mobile?: boolean
     url: '/chat',
   });
 
-export const imageUrl = (filename: string) => withBasePath(`/images/${filename}`);
+export const imageUrl = (filename: string) => `/images/${filename}`;
 
 export const LOBE_URL_IMPORT_NAME = 'settings';
 

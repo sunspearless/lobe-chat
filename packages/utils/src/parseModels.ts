@@ -1,8 +1,7 @@
+import { getModelPropertyWithFallback } from '@lobechat/model-runtime';
 import { produce } from 'immer';
+import { AiFullModelCard, AiModelType } from 'model-bank';
 
-import { AiFullModelCard, AiModelType } from '@/types/aiModel';
-
-import { getModelPropertyWithFallback } from './getFallbackModelProperty';
 import { merge } from './merge';
 
 /**
@@ -91,6 +90,10 @@ export const parseModelString = async (
             model.abilities!.files = true;
             break;
           }
+          case 'video': {
+            model.abilities!.video = true;
+            break;
+          }
           case 'search': {
             model.abilities!.search = true;
             break;
@@ -141,7 +144,7 @@ export const transformToAiModelList = async ({
   }
 
   // 异步获取配置
-  const { LOBE_DEFAULT_MODEL_LIST } = await import('@/config/aiModels');
+  const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
 
   return produce(chatModels, (draft) => {
     // 处理添加或替换逻辑

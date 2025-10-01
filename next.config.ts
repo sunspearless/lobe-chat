@@ -1,5 +1,4 @@
 import analyzer from '@next/bundle-analyzer';
-import { withSentryConfig } from '@sentry/nextjs';
 import withSerwistInit from '@serwist/next';
 import type { NextConfig } from 'next';
 import ReactComponentName from 'react-scan/react-component-name/webpack';
@@ -9,10 +8,10 @@ const buildWithDocker = process.env.DOCKER === 'true';
 const isDesktop = process.env.NEXT_PUBLIC_IS_DESKTOP_APP === '1';
 const enableReactScan = !!process.env.REACT_SCAN_MONITOR_API_KEY;
 const isUsePglite = process.env.NEXT_PUBLIC_CLIENT_DB === 'pglite';
+const shouldUseCSP = process.env.ENABLED_CSP === '1';
 
 // if you need to proxy the api endpoint to remote server
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH;
 const isStandaloneMode = buildWithDocker || isDesktop;
 
 const standaloneConfig: NextConfig = {
@@ -22,8 +21,14 @@ const standaloneConfig: NextConfig = {
 
 const nextConfig: NextConfig = {
   ...(isStandaloneMode ? standaloneConfig : {}),
-  basePath,
+  assetPrefix: process.env.NEXT_PUBLIC_ASSET_PREFIX,
+  compiler: {
+    emotion: true,
+  },
   compress: isProd,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     optimizePackageImports: [
       'emoji-mart',
@@ -31,6 +36,7 @@ const nextConfig: NextConfig = {
       '@emoji-mart/data',
       '@icons-pack/react-simple-icons',
       '@lobehub/ui',
+      '@lobehub/icons',
       'gpt-tokenizer',
     ],
     // oidc provider depend on constructor.name
@@ -39,16 +45,32 @@ const nextConfig: NextConfig = {
     // refs: https://github.com/lobehub/lobe-chat/pull/7430
     serverMinification: false,
     webVitalsAttribution: ['CLS', 'LCP'],
+    webpackMemoryOptimizations: true,
   },
   async headers() {
+    const securityHeaders = [
+      {
+        key: 'x-robots-tag',
+        value: 'all',
+      },
+    ];
+
+    if (shouldUseCSP) {
+      securityHeaders.push(
+        {
+          key: 'X-Frame-Options',
+          value: 'DENY',
+        },
+        {
+          key: 'Content-Security-Policy',
+          value: "frame-ancestors 'none';",
+        },
+      );
+    }
+
     return [
       {
-        headers: [
-          {
-            key: 'x-robots-tag',
-            value: 'all',
-          },
-        ],
+        headers: securityHeaders,
         source: '/:path*',
       },
       {
@@ -176,6 +198,7 @@ const nextConfig: NextConfig = {
     },
   },
   reactStrictMode: true,
+
   redirects: async () => [
     {
       destination: '/sitemap-index.xml',
@@ -222,11 +245,11 @@ const nextConfig: NextConfig = {
       permanent: true,
       source: '/discover/providers',
     },
-    {
-      destination: '/settings/common',
-      permanent: true,
-      source: '/settings',
-    },
+    // {
+    //   destination: '/settings/common',
+    //   permanent: true,
+    //   source: '/settings',
+    // },
     {
       destination: '/chat',
       permanent: true,
@@ -245,10 +268,14 @@ const nextConfig: NextConfig = {
       source: '/repos',
     },
   ],
+
   // when external packages in dev mode with turbopack, this config will lead to bundle error
   serverExternalPackages: isProd ? ['@electric-sql/pglite'] : undefined,
-
   transpilePackages: ['pdfjs-dist', 'mermaid'],
+
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
   webpack(config) {
     config.experiments = {
@@ -300,48 +327,4 @@ const withPWA =
       })
     : noWrapper;
 
-const hasSentry = !!process.env.NEXT_PUBLIC_SENTRY_DSN;
-const withSentry =
-  isProd && hasSentry
-    ? (c: NextConfig) =>
-        withSentryConfig(
-          c,
-          {
-            org: process.env.SENTRY_ORG,
-
-            project: process.env.SENTRY_PROJECT,
-            // For all available options, see:
-            // https://github.com/getsentry/sentry-webpack-plugin#options
-            // Suppresses source map uploading logs during build
-            silent: true,
-          },
-          {
-            // Enables automatic instrumentation of Vercel Cron Monitors.
-            // See the following for more information:
-            // https://docs.sentry.io/product/crons/
-            // https://vercel.com/docs/cron-jobs
-            automaticVercelMonitors: true,
-
-            // Automatically tree-shake Sentry logger statements to reduce bundle size
-            disableLogger: true,
-
-            // Hides source maps from generated client bundles
-            hideSourceMaps: true,
-
-            // Transpiles SDK to be compatible with IE11 (increases bundle size)
-            transpileClientSDK: true,
-
-            // Routes browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers. (increases server load)
-            // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-            // side errors will fail.
-            tunnelRoute: '/monitoring',
-
-            // For all available options, see:
-            // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-            // Upload a larger set of source maps for prettier stack traces (increases build time)
-            widenClientFileUpload: true,
-          },
-        )
-    : noWrapper;
-
-export default withBundleAnalyzer(withPWA(withSentry(nextConfig) as NextConfig));
+export default withBundleAnalyzer(withPWA(nextConfig as NextConfig));

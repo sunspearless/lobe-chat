@@ -9,6 +9,7 @@ import {
   text,
   uniqueIndex,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 import { createSelectSchema } from 'drizzle-zod';
 
@@ -18,6 +19,7 @@ import { GroundingSearch } from '@/types/search';
 import { idGenerator } from '../utils/idGenerator';
 import { timestamps } from './_helpers';
 import { agents } from './agent';
+import { chatGroups } from './chatGroup';
 import { files } from './file';
 import { chunks, embeddings } from './rag';
 import { sessions } from './session';
@@ -32,7 +34,7 @@ export const messages = pgTable(
       .$defaultFn(() => idGenerator('messages'))
       .primaryKey(),
 
-    role: text('role', { enum: ['user', 'system', 'assistant', 'tool'] }).notNull(),
+    role: varchar('role', { length: 255 }).notNull(),
     content: text('content'),
     reasoning: jsonb('reasoning').$type<ModelReasoning>(),
     search: jsonb('search').$type<GroundingSearch>(),
@@ -64,19 +66,22 @@ export const messages = pgTable(
 
     // used for group chat
     agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
-
+    groupId: text('group_id').references(() => chatGroups.id, { onDelete: 'set null' }),
+    // targetId can be an agent ID, "user", or null - no FK constraint
+    targetId: text('target_id'),
     ...timestamps,
   },
-  (table) => ({
-    createdAtIdx: index('messages_created_at_idx').on(table.createdAt),
-    messageClientIdUnique: uniqueIndex('message_client_id_user_unique').on(
-      table.clientId,
-      table.userId,
-    ),
-    topicIdIdx: index('messages_topic_id_idx').on(table.topicId),
-    parentIdIdx: index('messages_parent_id_idx').on(table.parentId),
-    quotaIdIdx: index('messages_quota_id_idx').on(table.quotaId),
-  }),
+  (table) => [
+    index('messages_created_at_idx').on(table.createdAt),
+    uniqueIndex('message_client_id_user_unique').on(table.clientId, table.userId),
+    index('messages_topic_id_idx').on(table.topicId),
+    index('messages_parent_id_idx').on(table.parentId),
+    index('messages_quota_id_idx').on(table.quotaId),
+
+    index('messages_user_id_idx').on(table.userId),
+    index('messages_session_id_idx').on(table.sessionId),
+    index('messages_thread_id_idx').on(table.threadId),
+  ],
 );
 
 // if the message container a plugin

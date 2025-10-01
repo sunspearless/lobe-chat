@@ -1,15 +1,15 @@
+import { AgentRuntimeErrorType } from '@lobechat/model-runtime';
+import { AsyncTaskError, AsyncTaskErrorType, AsyncTaskStatus } from '@lobechat/types';
 import debug from 'debug';
+import { RuntimeImageGenParams } from 'model-bank';
 import { z } from 'zod';
 
 import { ASYNC_TASK_TIMEOUT, AsyncTaskModel } from '@/database/models/asyncTask';
 import { FileModel } from '@/database/models/file';
 import { GenerationModel } from '@/database/models/generation';
-import { AgentRuntimeErrorType } from '@/libs/model-runtime/error';
-import { RuntimeImageGenParams } from '@/libs/standard-parameters/index';
 import { asyncAuthedProcedure, asyncRouter as router } from '@/libs/trpc/async';
 import { initModelRuntimeWithUserPayload } from '@/server/modules/ModelRuntime';
 import { GenerationService } from '@/server/services/generation';
-import { AsyncTaskError, AsyncTaskErrorType, AsyncTaskStatus } from '@/types/asyncTask';
 
 const log = debug('lobe-image:async');
 
@@ -112,7 +112,12 @@ export const imageRouter = router({
 
     log('Starting async image generation: %O', {
       generationId,
-      imageParams: { height: params.height, steps: params.steps, width: params.width },
+      imageParams: {
+        cfg: params.cfg,
+        height: params.height,
+        steps: params.steps,
+        width: params.width,
+      },
       model,
       prompt: params.prompt,
       provider,
@@ -129,13 +134,14 @@ export const imageRouter = router({
     try {
       const imageGenerationPromise = async (signal: AbortSignal) => {
         log('Initializing agent runtime for provider: %s', provider);
+
         const agentRuntime = await initModelRuntimeWithUserPayload(provider, ctx.jwtPayload);
 
         // Check if operation has been cancelled
         checkAbortSignal(signal);
 
         log('Agent runtime initialized, calling createImage');
-        const response = await agentRuntime.createImage({
+        const response = await agentRuntime.createImage!({
           model,
           params: params as unknown as RuntimeImageGenParams,
         });
@@ -144,6 +150,13 @@ export const imageRouter = router({
           log('Create image response is empty');
           throw new Error('Create image response is empty');
         }
+
+        log('Create image response: %O', {
+          ...response,
+          imageUrl: response.imageUrl?.startsWith('data:')
+            ? response.imageUrl.slice(0, IMAGE_URL_PREVIEW_LENGTH) + '...'
+            : response.imageUrl,
+        });
 
         // Check if operation has been cancelled
         checkAbortSignal(signal);

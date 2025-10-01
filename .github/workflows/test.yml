@@ -7,11 +7,20 @@ permissions:
 
 jobs:
   # Package tests - using each package's own test script
-  test-packages:
+  test-intenral-packages:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [file-loaders, prompts, model-runtime, web-crawler, electron-server-ipc, utils]
+        package:
+          - file-loaders
+          - prompts
+          - model-runtime
+          - web-crawler
+          - electron-server-ipc
+          - utils
+          - python-interpreter
+          - context-engine
+          - agent-runtime
 
     name: Test package ${{ matrix.package }}
 
@@ -19,14 +28,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
-
-      - uses: pnpm/action-setup@v4
+          package-manager-cache: false
 
       - name: Install bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ secrets.BUN_VERSION }}
 
@@ -34,7 +42,42 @@ jobs:
         run: bun i
 
       - name: Test ${{ matrix.package }} package with coverage
-        run: pnpm --filter @lobechat/${{ matrix.package }} test:coverage
+        run: bun run --filter @lobechat/${{ matrix.package }} test:coverage
+
+      - name: Upload ${{ matrix.package }} coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./packages/${{ matrix.package }}/coverage/lcov.info
+          flags: packages/${{ matrix.package }}
+
+  test-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [model-bank]
+
+    name: Test package ${{ matrix.package }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ secrets.BUN_VERSION }}
+
+      - name: Install deps
+        run: bun i
+
+      - name: Test ${{ matrix.package }} package with coverage
+        run: bun run --filter ${{ matrix.package }} test:coverage
 
       - name: Upload ${{ matrix.package }} coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -53,12 +96,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
 
       - name: Install bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ secrets.BUN_VERSION }}
 
@@ -96,12 +140,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
 
       - name: Install bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ secrets.BUN_VERSION }}
 
@@ -111,17 +156,15 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - uses: pnpm/action-setup@v4
-
       - name: Test Client DB
-        run: pnpm --filter @lobechat/database test:client-db
+        run: bun run --filter @lobechat/database test:client-db
         env:
           KEY_VAULTS_SECRET: LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s=
           S3_PUBLIC_DOMAIN: https://example.com
           APP_URL: https://home.com
 
       - name: Test Coverage
-        run: pnpm --filter @lobechat/database test:coverage
+        run: bun run --filter @lobechat/database test:coverage
         env:
           DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
           DATABASE_DRIVER: node

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { LobeDefaultAiModelListItem } from '@/types/aiModel';
-import { ModelTokensUsage } from '@/types/message';
+import { ModelUsage } from '@/types/message';
 
+import { LobeDefaultAiModelListItem } from '../../../../../../packages/model-bank/src/types/aiModel';
 import { getDetailsToken } from './tokens';
 
 describe('getDetailsToken', () => {
@@ -20,7 +20,7 @@ describe('getDetailsToken', () => {
   } as LobeDefaultAiModelListItem;
 
   it('should return empty object when usage is empty', () => {
-    const usage: ModelTokensUsage = {};
+    const usage: ModelUsage = {};
     const result = getDetailsToken(usage);
 
     expect(result).toEqual({
@@ -38,7 +38,7 @@ describe('getDetailsToken', () => {
   });
 
   it('should handle inputTextTokens correctly', () => {
-    const usage: ModelTokensUsage = {
+    const usage: ModelUsage = {
       inputTextTokens: 100,
     };
 
@@ -67,7 +67,7 @@ describe('getDetailsToken', () => {
     const usage = {
       totalInputTokens: 200,
       cachedTokens: 50,
-    } as ModelTokensUsage;
+    } as ModelUsage;
 
     const result = getDetailsToken(usage, mockModelCard);
 
@@ -83,7 +83,7 @@ describe('getDetailsToken', () => {
   });
 
   it('should handle outputTokens correctly', () => {
-    const usage = { outputTokens: 150 } as ModelTokensUsage;
+    const usage = { outputTokens: 150 } as ModelUsage;
 
     const result = getDetailsToken(usage, mockModelCard);
 
@@ -102,7 +102,7 @@ describe('getDetailsToken', () => {
     const usage = {
       outputTokens: 200,
       reasoningTokens: 50,
-    } as ModelTokensUsage;
+    } as ModelUsage;
 
     const result = getDetailsToken(usage, mockModelCard);
 
@@ -122,7 +122,7 @@ describe('getDetailsToken', () => {
       inputAudioTokens: 100,
       outputAudioTokens: 50,
       outputTokens: 150,
-    } as ModelTokensUsage;
+    } as ModelUsage;
 
     const result = getDetailsToken(usage, mockModelCard);
 
@@ -143,8 +143,46 @@ describe('getDetailsToken', () => {
     });
   });
 
+  it('should handle outputImageTokens correctly', () => {
+    const usage = {
+      inputTextTokens: 100,
+      outputImageTokens: 60,
+      outputReasoningTokens: 30,
+      totalOutputTokens: 200,
+      totalTokens: 300,
+    } as ModelUsage;
+
+    const result = getDetailsToken(usage, mockModelCard);
+
+    expect(result.outputImage).toEqual({
+      credit: 1, // 60 * 0.02 = 1.2 -> 1
+      id: 'outputImage',
+      token: 60,
+    });
+
+    expect(result.outputReasoning).toEqual({
+      credit: 1, // 30 * 0.02 = 0.6 -> 1
+      token: 30,
+    });
+
+    expect(result.outputText).toEqual({
+      credit: 2, // (200 - 30 - 60) * 0.02 = 2.2 -> 2
+      token: 110,
+    });
+
+    expect(result.totalOutput).toEqual({
+      credit: 4, // 200 * 0.02 = 4
+      token: 200,
+    });
+
+    expect(result.totalTokens).toEqual({
+      credit: 4, // total credit equals totalOutputCredit here
+      token: 300,
+    });
+  });
+
   it('should handle inputCitationTokens correctly', () => {
-    const usage: ModelTokensUsage = {
+    const usage: ModelUsage = {
       inputCitationTokens: 75,
     };
 
@@ -162,7 +200,7 @@ describe('getDetailsToken', () => {
       totalInputTokens: 200,
       inputCachedTokens: 50,
       outputTokens: 300,
-    } as ModelTokensUsage;
+    } as ModelUsage;
 
     const result = getDetailsToken(usage, mockModelCard);
 
@@ -178,7 +216,7 @@ describe('getDetailsToken', () => {
   });
 
   it('should handle missing pricing information', () => {
-    const usage = { inputTextTokens: 100, outputTokens: 200 } as ModelTokensUsage;
+    const usage = { inputTextTokens: 100, outputTokens: 200 } as ModelUsage;
 
     const result = getDetailsToken(usage);
 
@@ -194,7 +232,7 @@ describe('getDetailsToken', () => {
   });
 
   it('should handle complex scenario with all token types', () => {
-    const usage: ModelTokensUsage = {
+    const usage: ModelUsage = {
       totalTokens: 1000,
       totalInputTokens: 400,
       inputTextTokens: 300,

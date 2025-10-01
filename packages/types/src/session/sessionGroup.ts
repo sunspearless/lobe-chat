@@ -1,11 +1,11 @@
 import { LobeSessions } from './agentSession';
 
+export type SessionGroupId = string;
+
 export enum SessionDefaultGroup {
   Default = 'default',
   Pinned = 'pinned',
 }
-
-export type SessionGroupId = SessionDefaultGroup | string;
 
 export interface SessionGroupItem {
   createdAt: Date;

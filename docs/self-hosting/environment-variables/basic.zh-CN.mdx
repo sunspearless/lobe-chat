@@ -34,13 +34,6 @@ LobeChat 在部署时提供了一些额外的配置项，你可以使用环境�
 
 使用 `turn` 模式下，将按照填写的顺序，轮询获取得到 API Key。
 
-### `NEXT_PUBLIC_BASE_PATH`
-
-- 类型：可选
-- 描述：为 LobeChat 添加 `basePath`
-- 默认值: `-`
-- 示例: `/test`
-
 ### `DEFAULT_AGENT_CONFIG`
 
 - 类型：可选
@@ -147,6 +140,13 @@ LobeChat 在部署时提供了一些额外的配置项，你可以使用环境�
 - 说明：控制是否启用路由保护。当设置为 `1` 时，除了公共路由（如 `/api/auth`、`/next-auth/*`、`/login`、`/signup`）外，所有路由都需要认证。当设置为 `0` 或未设置时，只有特定的受保护路由（如 `/settings`、`/files` 等）需要认证。
 - 默认值：`0`
 - 示例：`1` 或 `0`
+
+### `NEXT_PUBLIC_ASSET_PREFIX`
+
+- 类型：可选
+- 描述：静态资源的路径访问前缀，你可以设置为 CDN 访问的 URL，具体可参考： [assetPrefix](https://nextjs.org/docs/app/api-reference/config/next-config-js/assetPrefix)
+- 默认值：-
+- 示例：`https://cdn.example.com`
 
 ## 插件服务
 

@@ -8,11 +8,13 @@ alwaysApply: false
 
 ## Types and Type Safety
 
-- Avoid explicit type annotations when TypeScript can infer types.
-- Avoid implicitly `any` variables; explicitly type when necessary (e.g., `let a: number` instead of `let a`).
-- Use the most accurate type possible (e.g., prefer `Record<PropertyKey, unknown>` over `object`).
-- Prefer `interface` over `type` for object shapes (e.g., React component props). Keep `type` for unions, intersections, and utility types.
-- Prefer `as const satisfies XyzInterface` over plain `as const` when suitable.
+- avoid explicit type annotations when TypeScript can infer types.
+- avoid implicitly `any` variables; explicitly type when necessary (e.g., `let a: number` instead of `let a`).
+- use the most accurate type possible (e.g., prefer `Record<PropertyKey, unknown>` over `object` and `any`).
+- prefer `interface` over `type` for object shapes (e.g., React component props). Keep `type` for unions, intersections, and utility types.
+- prefer `as const satisfies XyzInterface` over plain `as const` when suitable.
+- prefer `@ts-expect-error` over `@ts-ignore` over `as any`
+- Avoid meaningless null/undefined parameters; design strict function contracts.
 
 ## Imports and Modules
 

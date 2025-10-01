@@ -1,4 +1,9 @@
 {
+  "ArgsInput": {
+    "addArgument": "매개변수 추가",
+    "argumentPlaceholder": "매개변수 {{index}}",
+    "enterFirstArgument": "첫 번째 매개변수를 입력하세요..."
+  },
   "DragUpload": {
     "dragDesc": "여기에 파일을 드래그하여 여러 이미지를 업로드할 수 있습니다.",
     "dragFileDesc": "여기에 이미지와 파일을 드래그하여 여러 이미지와 파일을 업로드할 수 있습니다.",
@@ -68,6 +73,18 @@
   "GoBack": {
     "back": "뒤로 가기"
   },
+  "HtmlPreview": {
+    "actions": {
+      "download": "다운로드",
+      "preview": "미리보기"
+    },
+    "iframeTitle": "HTML 미리보기",
+    "mode": {
+      "code": "코드",
+      "preview": "미리보기"
+    },
+    "title": "HTML 미리보기"
+  },
   "ImageUpload": {
     "actions": {
       "changeImage": "이미지 변경 클릭",
@@ -97,6 +114,7 @@
       "reasoning": "이 모델은 깊이 있는 사고를 지원합니다.",
       "search": "이 모델은 온라인 검색을 지원합니다.",
       "tokens": "이 모델은 단일 세션당 최대 {{tokens}} 토큰을 지원합니다",
+      "video": "이 모델은 비디오 인식을 지원합니다",
       "vision": "이 모델은 시각 인식을 지원합니다"
     },
     "removed": "모델이 목록에서 제거되었습니다. 선택이 취소되면 자동으로 제거됩니다."
@@ -125,6 +143,12 @@
     },
     "progress": {
       "uploadingWithCount": "{{completed}}/{{total}} 업로드 완료"
+    },
+    "validation": {
+      "fileSizeExceeded": "파일 용량이 허용된 최대 크기를 초과했습니다",
+      "fileSizeExceededDetail": "{{fileName}} ({{actualSize}})이(가) 허용된 최대 크기 {{maxSize}}를 초과했습니다",
+      "fileSizeExceededMultiple": "{{count}}개의 파일이 허용된 최대 크기 {{maxSize}}를 초과합니다: {{fileList}}",
+      "imageCountExceeded": "이미지 수가 허용된 한도를 초과했습니다"
     }
   },
   "OllamaSetupGuide": {

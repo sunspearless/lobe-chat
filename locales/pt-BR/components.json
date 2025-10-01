@@ -1,4 +1,9 @@
 {
+  "ArgsInput": {
+    "addArgument": "Adicionar argumento",
+    "argumentPlaceholder": "Argumento {{index}}",
+    "enterFirstArgument": "Digite o primeiro argumento..."
+  },
   "DragUpload": {
     "dragDesc": "Arraste os arquivos para cá, suportando o upload de várias imagens.",
     "dragFileDesc": "Arraste imagens e arquivos para cá, suportando o upload de várias imagens e arquivos.",
@@ -68,6 +73,18 @@
   "GoBack": {
     "back": "Voltar"
   },
+  "HtmlPreview": {
+    "actions": {
+      "download": "Baixar",
+      "preview": "Visualizar"
+    },
+    "iframeTitle": "Visualização HTML",
+    "mode": {
+      "code": "Código",
+      "preview": "Visualizar"
+    },
+    "title": "Visualização HTML"
+  },
   "ImageUpload": {
     "actions": {
       "changeImage": "Clique para alterar a imagem",
@@ -97,6 +114,7 @@
       "reasoning": "Este modelo suporta pensamento profundo",
       "search": "Este modelo suporta pesquisa online",
       "tokens": "Este modelo suporta no máximo {{tokens}} tokens por sessão.",
+      "video": "Este modelo suporta reconhecimento de vídeo",
       "vision": "Este modelo suporta reconhecimento visual."
     },
     "removed": "Este modelo não está na lista, se for desmarcado, será removido automaticamente"
@@ -125,6 +143,12 @@
     },
     "progress": {
       "uploadingWithCount": "{{completed}}/{{total}} enviados"
+    },
+    "validation": {
+      "fileSizeExceeded": "Tamanho do arquivo excede o limite",
+      "fileSizeExceededDetail": "{{fileName}} ({{actualSize}}) excede o limite máximo de {{maxSize}}",
+      "fileSizeExceededMultiple": "{{count}} arquivos excedem o limite máximo de {{maxSize}}: {{fileList}}",
+      "imageCountExceeded": "Número de imagens excede o limite"
     }
   },
   "OllamaSetupGuide": {

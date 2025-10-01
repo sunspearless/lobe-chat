@@ -1,5 +1,5 @@
 /* eslint-disable sort-keys-fix/sort-keys-fix */
-import { ILobeAgentRuntimeErrorType } from '@/libs/model-runtime';
+import type { ILobeAgentRuntimeErrorType } from '@lobechat/model-runtime';
 
 export const ChatErrorType = {
   // ******* 业务错误语义 ******* //
@@ -9,6 +9,8 @@ export const ChatErrorType = {
   FreePlanLimit: 'FreePlanLimit', // is not Clerk User
   SubscriptionPlanLimit: 'SubscriptionPlanLimit', // 订阅用户超限
   SubscriptionKeyMismatch: 'SubscriptionKeyMismatch', // 订阅 key 不匹配
+
+  SupervisorDecisionFailed: 'SupervisorDecisionFailed', // 主持人决策失败
 
   InvalidUserKey: 'InvalidUserKey', // is not valid User key
   CreateMessageError: 'CreateMessageError',

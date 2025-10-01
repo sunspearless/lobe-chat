@@ -1,9 +1,22 @@
-import { ChatMessageError } from '@/types/message/chat';
-import { ChatImageItem } from '@/types/message/image';
-import { ChatToolPayload, MessageToolCall } from '@/types/message/tools';
-import { GroundingSearch } from '@/types/search';
+/* eslint-disable sort-keys-fix/sort-keys-fix , typescript-sort-keys/interface */
+import type { ILobeAgentRuntimeErrorType } from '@lobechat/model-runtime';
+import type { IPluginErrorType } from '@lobehub/chat-plugin-sdk';
 
-export interface CitationItem {
+import { ErrorType } from '../fetch';
+import { GroundingSearch } from '../search';
+import { ChatImageItem } from './image';
+import { ChatToolPayload, MessageToolCall } from './tools';
+
+/**
+ * 聊天消息错误对象
+ */
+export interface ChatMessageError {
+  body?: any;
+  message: string;
+  type: ErrorType | IPluginErrorType | ILobeAgentRuntimeErrorType;
+}
+
+export interface ChatCitationItem {
   id?: string;
   onlyUrl?: boolean;
   title?: string;
@@ -17,44 +30,69 @@ export interface ModelReasoning {
 }
 
 export interface ModelTokensUsage {
-  acceptedPredictionTokens?: number;
-  inputAudioTokens?: number;
-  inputCacheMissTokens?: number;
-  inputCachedTokens?: number;
+  // Input tokens breakdown
   /**
-   * currently only pplx has citation_tokens
+   * user prompt input
    */
-  inputCitationTokens?: number;
+  // Input cache tokens
+  inputCachedTokens?: number;
+  inputCacheMissTokens?: number;
+  inputWriteCacheTokens?: number;
+
+  inputTextTokens?: number;
   /**
    * user prompt image
    */
   inputImageTokens?: number;
+  inputAudioTokens?: number;
   /**
-   * user prompt input
+   * currently only pplx has citation_tokens
    */
-  inputTextTokens?: number;
-  inputWriteCacheTokens?: number;
-  outputAudioTokens?: number;
-  outputImageTokens?: number;
-  outputReasoningTokens?: number;
+  inputCitationTokens?: number;
+
+  // Output tokens breakdown
   outputTextTokens?: number;
+  outputImageTokens?: number;
+  outputAudioTokens?: number;
+  outputReasoningTokens?: number;
+
+  // Prediction tokens
+  acceptedPredictionTokens?: number;
   rejectedPredictionTokens?: number;
+
+  // Total tokens
   totalInputTokens?: number;
   totalOutputTokens?: number;
   totalTokens?: number;
 }
 
-export interface ModelSpeed {
-  // tokens per second
-  tps?: number;
-  // time to fist token
-  ttft?: number;
+export interface ModelUsage extends ModelTokensUsage {
+  /**
+   * dollar
+   */
+  cost?: number;
 }
 
-export interface MessageMetadata extends ModelTokensUsage {
+export interface ModelSpeed {
+  /**
+   * tokens per second
+   */
   tps?: number;
+  /**
+   * time to first token
+   */
   ttft?: number;
+  /**
+   * from output start to output finish
+   */
+  duration?: number;
+  /**
+   * from input start to output finish
+   */
+  latency?: number;
 }
+
+export interface MessageMetadata extends ModelUsage, ModelSpeed {}
 
 export type MessageRoleType = 'user' | 'system' | 'assistant' | 'tool';
 

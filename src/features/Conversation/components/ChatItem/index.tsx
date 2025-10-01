@@ -2,13 +2,27 @@
 
 import { createStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { MouseEventHandler, ReactNode, memo, use, useCallback, useMemo } from 'react';
+import {
+  MouseEventHandler,
+  ReactNode,
+  memo,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 
+import { HtmlPreviewAction } from '@/components/HtmlPreview';
 import { isDesktop } from '@/const/version';
 import ChatItem from '@/features/ChatItem';
-import { VirtuosoContext } from '@/features/Conversation/components/VirtualizedList/VirtuosoContext';
+import {
+  VirtuosoContext,
+  removeVirtuosoVisibleItem,
+  upsertVirtuosoVisibleItem,
+} from '@/features/Conversation/components/VirtualizedList/VirtuosoContext';
 import { useAgentStore } from '@/store/agent';
 import { agentChatConfigSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -32,6 +46,14 @@ import { normalizeThinkTags, processWithArtifact } from './utils';
 
 const rehypePlugins = markdownElements.map((element) => element.rehypePlugin).filter(Boolean);
 const remarkPlugins = markdownElements.map((element) => element.remarkPlugin).filter(Boolean);
+
+const isHtmlCode = (content: string, language: string) => {
+  return (
+    language === 'html' ||
+    (language === '' && content.includes('<html>')) ||
+    (language === '' && content.includes('<!DOCTYPE html>'))
+  );
+};
 
 const useStyles = createStyles(({ css, prefixCls }) => ({
   loading: css`
@@ -70,6 +92,7 @@ const Item = memo<ChatListItemProps>(
   }) => {
     const { t } = useTranslation('common');
     const { styles, cx } = useStyles();
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
     const type = useAgentStore(agentChatConfigSelectors.displayMode);
     const item = useChatStore(chatSelectors.getMessageById(id), isEqual);
@@ -175,6 +198,20 @@ const Item = memo<ChatListItemProps>(
       () => ({
         animated,
         citations: item?.role === 'user' ? undefined : item?.search?.citations,
+        componentProps: {
+          highlight: {
+            actionsRender: ({ content, actionIconSize, language, originalNode }: any) => {
+              const showHtmlPreview = isHtmlCode(content, language);
+
+              return (
+                <>
+                  {showHtmlPreview && <HtmlPreviewAction content={content} size={actionIconSize} />}
+                  {originalNode}
+                </>
+              );
+            },
+          },
+        },
         components,
         customRender: markdownCustomRender,
         enableCustomFootnotes: item?.role === 'assistant',
@@ -194,6 +231,44 @@ const Item = memo<ChatListItemProps>(
 
     const onChange = useCallback((value: string) => updateMessageContent(id, value), [id]);
     const virtuosoRef = use(VirtuosoContext);
+
+    useEffect(() => {
+      if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+
+      const element = containerRef.current;
+      if (!element) return;
+
+      const root = element.closest('[data-virtuoso-scroller]');
+      const thresholds = [0, 0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 1];
+      const options: any = { threshold: thresholds };
+
+      if (root instanceof Element) options.root = root;
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.target !== element) return;
+
+          if (entry.isIntersecting) {
+            const { bottom, top } = entry.intersectionRect;
+
+            upsertVirtuosoVisibleItem(index, {
+              bottom,
+              ratio: entry.intersectionRatio,
+              top,
+            });
+          } else {
+            removeVirtuosoVisibleItem(index);
+          }
+        });
+      }, options);
+
+      observer.observe(element);
+
+      return () => {
+        observer.disconnect();
+        removeVirtuosoVisibleItem(index);
+      };
+    }, [index]);
 
     const onDoubleClick = useCallback<MouseEventHandler<HTMLDivElement>>(
       (e) => {
@@ -244,7 +319,9 @@ const Item = memo<ChatListItemProps>(
           {enableHistoryDivider && <History />}
           <Flexbox
             className={cx(styles.message, className, isMessageLoading && styles.loading)}
+            data-index={index}
             onContextMenu={onContextMenu}
+            ref={containerRef}
           >
             <ChatItem
               actions={actionBar}
