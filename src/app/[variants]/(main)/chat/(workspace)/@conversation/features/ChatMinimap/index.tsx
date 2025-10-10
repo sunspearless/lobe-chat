@@ -3,6 +3,7 @@
 import { Icon } from '@lobehub/ui';
 import { Tooltip } from 'antd';
 import { createStyles, useTheme } from 'antd-style';
+import debug from 'debug';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { memo, useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,10 +18,12 @@ import {
 import { useChatStore } from '@/store/chat';
 import { chatSelectors } from '@/store/chat/selectors';
 
+const log = debug('lobe-react:chat-minimap');
+
 const MIN_WIDTH = 16;
 const MAX_WIDTH = 30;
 const MAX_CONTENT_LENGTH = 320;
-const MIN_MESSAGES = 6;
+const MIN_MESSAGES = 4;
 
 const useStyles = createStyles(({ css, token }) => ({
   arrow: css`
@@ -129,6 +132,26 @@ const useStyles = createStyles(({ css, token }) => ({
       opacity: 1;
     }
   `,
+  railContent: css`
+    scrollbar-width: none;
+
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: end;
+    justify-content: space-between;
+
+    max-height: round(down, 50vh, 12px);
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    -ms-overflow-style: none;
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  `,
 }));
 
 const getIndicatorWidth = (content: string | undefined) => {
@@ -199,8 +222,8 @@ const ChatMinimap = () => {
   const activeIndicatorPosition = useMemo(() => {
     if (activeIndex === null) return null;
 
-    console.log('> activeIndex', activeIndex);
-    console.log('> indicatorIndexMap', indicatorIndexMap);
+    log('> activeIndex', activeIndex);
+    log('> indicatorIndexMap', indicatorIndexMap);
 
     return indicatorIndexMap.get(activeIndex) ?? null;
   }, [activeIndex, indicatorIndexMap]);
@@ -226,7 +249,7 @@ const ChatMinimap = () => {
       let targetPosition: number;
 
       if (activeIndicatorPosition !== null) {
-        console.log('activeIndicatorPosition', activeIndicatorPosition);
+        log('activeIndicatorPosition', activeIndicatorPosition);
         // We're on an indicator, move to prev/next
         const delta = direction === 'prev' ? -1 : 1;
         targetPosition = Math.min(
@@ -245,8 +268,6 @@ const ChatMinimap = () => {
           }
           targetPosition = matched === -1 ? 0 : matched;
         } else {
-          console.log('activeIndex', activeIndex);
-          console.log('indicators', indicators);
           let matched = indicators.length - 1;
           for (const [pos, indicator] of indicators.entries()) {
             if (indicator.virtuosoIndex > activeIndex) {
@@ -295,28 +316,38 @@ const ChatMinimap = () => {
             <Icon color={theme.colorTextTertiary} icon={ChevronUp} size={16} />
           </button>
         </Tooltip>
-        {indicators.map(({ id, width, preview, virtuosoIndex }, position) => {
-          const isActive = activeIndicatorPosition === position;
+        <Flexbox className={styles.railContent}>
+          {indicators.map(({ id, width, preview, virtuosoIndex }, position) => {
+            const isActive = activeIndicatorPosition === position;
 
-          return (
-            <Tooltip key={id} mouseEnterDelay={0.1} placement={'left'} title={preview || undefined}>
-              <button
-                aria-current={isActive ? 'true' : undefined}
-                aria-label={t('minimap.jumpToMessage', { index: position + 1 })}
-                className={styles.indicator}
-                onClick={() => handleJump(virtuosoIndex)}
-                style={{
-                  width,
-                }}
-                type={'button'}
+            return (
+              <Tooltip
+                key={id}
+                mouseEnterDelay={0.1}
+                placement={'left'}
+                title={preview || undefined}
               >
-                <div
-                  className={cx(styles.indicatorContent, isActive && styles.indicatorContentActive)}
-                />
-              </button>
-            </Tooltip>
-          );
-        })}
+                <button
+                  aria-current={isActive ? 'true' : undefined}
+                  aria-label={t('minimap.jumpToMessage', { index: position + 1 })}
+                  className={styles.indicator}
+                  onClick={() => handleJump(virtuosoIndex)}
+                  style={{
+                    width,
+                  }}
+                  type={'button'}
+                >
+                  <div
+                    className={cx(
+                      styles.indicatorContent,
+                      isActive && styles.indicatorContentActive,
+                    )}
+                  />
+                </button>
+              </Tooltip>
+            );
+          })}
+        </Flexbox>
         <Tooltip mouseEnterDelay={0.1} placement={'left'} title={t('minimap.nextMessage')}>
           <button
             aria-label={t('minimap.nextMessage')}
